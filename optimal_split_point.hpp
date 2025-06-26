@@ -27,7 +27,7 @@ namespace osp {
                 std::input_iterator                    tp_input_iterator_t,
                 std::sentinel_for<tp_input_iterator_t> tp_sentinel_iterator_t,
                 typename                               tp_cost_operation_t,
-                typename                               tp_comp_operation_t,
+                typename                               tp_comp_operation_t  = std::less<>,
                 typename                               tp_cost_projection_t = std::identity,
                 typename                               tp_comp_projection_t = std::identity
             >
@@ -73,7 +73,7 @@ namespace osp {
                 tp_input_iterator_t    p_first,
                 tp_sentinel_iterator_t p_last,
                 tp_cost_operation_t    p_cost_operation,
-                tp_comp_operation_t    p_comp_operation,
+                tp_comp_operation_t    p_comp_operation  = {},
                 tp_cost_projection_t   p_cost_projection = {},
                 tp_comp_projection_t   p_comp_projection = {}
             )
@@ -100,7 +100,7 @@ namespace osp {
             template <
                 std::ranges::input_range tp_input_range_t,
                 typename                 tp_cost_operation_t,
-                typename                 tp_comp_operation_t,
+                typename                 tp_comp_operation_t  = std::less<>,
                 typename                 tp_cost_projection_t = std::identity,
                 typename                 tp_comp_projection_t = std::identity
             >
@@ -145,7 +145,7 @@ namespace osp {
             auto constexpr operator()[[nodiscard]] (
                 tp_input_range_t&&   p_range,
                 tp_cost_operation_t  p_cost_operation,
-                tp_comp_operation_t  p_comp_operation,
+                tp_comp_operation_t  p_comp_operation  = {},
                 tp_cost_projection_t p_cost_projection = {},
                 tp_comp_projection_t p_comp_projection = {}
             )
@@ -175,7 +175,7 @@ namespace osp {
                 std::input_iterator                    tp_input_iterator_t,
                 std::sentinel_for<tp_input_iterator_t> tp_sentinel_iterator_t,
                 typename                               tp_cost_operation_t,
-                typename                               tp_comp_operation_t,
+                typename                               tp_comp_operation_t  = std::less<>,
                 typename                               tp_cost_projection_t = std::identity,
                 typename                               tp_comp_projection_t = std::identity
             >
@@ -221,7 +221,7 @@ namespace osp {
                 tp_input_iterator_t    p_first,
                 tp_sentinel_iterator_t p_last,
                 tp_cost_operation_t    p_cost_operation,
-                tp_comp_operation_t    p_comp_operation,
+                tp_comp_operation_t    p_comp_operation  = {},
                 tp_cost_projection_t   p_cost_projection = {},
                 tp_comp_projection_t   p_comp_projection = {}
             )
@@ -271,7 +271,7 @@ namespace osp {
             template <
                 std::ranges::input_range tp_input_range_t,
                 typename                 tp_cost_operation_t,
-                typename                 tp_comp_operation_t,
+                typename                 tp_comp_operation_t  = std::less<>,
                 typename                 tp_cost_projection_t = std::identity,
                 typename                 tp_comp_projection_t = std::identity
             >
@@ -316,7 +316,7 @@ namespace osp {
             auto constexpr operator()[[nodiscard]] (
                 tp_input_range_t&&   p_range,
                 tp_cost_operation_t  p_cost_operation,
-                tp_comp_operation_t  p_comp_operation,
+                tp_comp_operation_t  p_comp_operation  = {},
                 tp_cost_projection_t p_cost_projection = {},
                 tp_comp_projection_t p_comp_projection = {}
             )
