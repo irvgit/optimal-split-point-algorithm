@@ -23,9 +23,9 @@ namespace osp {
         template <typename tp_type_t>
         struct is_subrange : std::false_type {};
         template <
-            std::input_iterator                      tp_input_itereator_t,
+            std::input_iterator                     tp_input_itereator_t,
             std::sentinel_for<tp_input_itereator_t> tp_sentinel_iterator_t,
-            std::ranges::subrange_kind               tp_subrange_kind
+            std::ranges::subrange_kind              tp_subrange_kind
         >
         struct is_subrange<std::ranges::subrange<
             tp_input_itereator_t,
@@ -53,6 +53,62 @@ namespace osp {
             pair<tp_type_t> &&
             subrange<typename std::remove_cvref_t<tp_type_t>::first_type> &&
             subrange<typename std::remove_cvref_t<tp_type_t>::second_type>;
+
+        template <
+            typename tp_input_iterator_t,
+            typename tp_sentinel_iterator_t,
+            typename tp_cost_operation_t,
+            typename tp_sum_operation_t,
+            typename tp_comp_operation_t,
+            typename tp_cost_projection_t,
+            typename tp_sum_projection_t,
+            typename tp_comp_projection_t
+        >
+        concept binary_splitable = std::predicate<
+            tp_comp_operation_t,
+            std::invoke_result_t<
+                tp_comp_projection_t,
+                std::invoke_result_t<
+                    tp_sum_operation_t,
+                    std::invoke_result_t<
+                        tp_sum_projection_t,
+                        std::invoke_result_t<
+                            tp_cost_operation_t,
+                            std::invoke_result_t<
+                                tp_cost_projection_t,
+                                std::ranges::subrange<
+                                    tp_input_iterator_t,
+                                    tp_input_iterator_t
+                                >
+                            >
+                        >
+                    >,
+                    std::invoke_result_t<
+                        tp_sum_projection_t,
+                        std::invoke_result_t<
+                            tp_cost_operation_t,
+                            std::invoke_result_t<
+                                tp_cost_projection_t,
+                                std::ranges::subrange<
+                                    tp_input_iterator_t,
+                                    tp_sentinel_iterator_t
+                                >
+                            >
+                        >
+                    >
+                >
+            >,
+            std::invoke_result_t<
+                tp_cost_operation_t,
+                std::invoke_result_t<
+                    tp_cost_projection_t,
+                    std::ranges::subrange<
+                        tp_input_iterator_t,
+                        tp_sentinel_iterator_t
+                    >
+                >
+            >
+        >;
     }
 
     namespace detail {
@@ -175,60 +231,39 @@ namespace osp {
                 std::input_iterator                    tp_input_iterator_t,
                 std::sentinel_for<tp_input_iterator_t> tp_sentinel_iterator_t,
                 typename                               tp_cost_operation_t,
+                typename                               tp_sum_operation_t   = std::plus<>,
                 typename                               tp_comp_operation_t  = std::ranges::less,
                 typename                               tp_cost_projection_t = std::identity,
+                typename                               tp_sum_projection_t  = std::identity,
                 typename                               tp_comp_projection_t = std::identity
             >
             requires (
-                std::predicate<
+                binary_splitable<
+                    tp_input_iterator_t,
+                    tp_sentinel_iterator_t,
+                    tp_cost_operation_t,
+                    tp_sum_operation_t,
                     tp_comp_operation_t,
-                    std::invoke_result_t<
-                        std::plus<>,
-                        std::invoke_result_t<
-                            tp_cost_operation_t,
-                            std::invoke_result_t<
-                                tp_cost_projection_t,
-                                std::ranges::subrange<
-                                    tp_input_iterator_t,
-                                    tp_input_iterator_t
-                                >
-                            >
-                        >,
-                        std::invoke_result_t<
-                            tp_cost_operation_t,
-                            std::invoke_result_t<
-                                tp_cost_projection_t,
-                                std::ranges::subrange<
-                                    tp_input_iterator_t,
-                                    tp_sentinel_iterator_t
-                                >
-                            >
-                        >
-                    >,
-                    std::invoke_result_t<
-                        tp_cost_operation_t,
-                        std::invoke_result_t<
-                            tp_cost_projection_t,
-                            std::ranges::subrange<
-                                tp_input_iterator_t,
-                                tp_sentinel_iterator_t
-                            >
-                        >
-                    >
+                    tp_cost_projection_t,
+                    tp_sum_projection_t,
+                    tp_comp_projection_t
                 >
             )
             auto constexpr operator()[[nodiscard]] (
                 tp_input_iterator_t    p_first,
                 tp_sentinel_iterator_t p_last,
                 tp_cost_operation_t    p_cost_operation,
+                tp_sum_operation_t     p_sum_operation   = {},
                 tp_comp_operation_t    p_comp_operation  = {},
                 tp_cost_projection_t   p_cost_projection = {},
+                tp_sum_projection_t    p_sum_projection  = {},
                 tp_comp_projection_t   p_comp_projection = {}
             )
             const
             -> tp_input_iterator_t {
-                auto constexpr l_impl = [](auto&& p_left, auto&& p_middle, auto&& p_right, auto&& p_cost_op, auto&& p_comp_op, auto&& p_cost_proj, auto&& p_comp_proj, auto&& p_cost, auto&& p_result) {
-                    if (auto l_sum = std::invoke(p_cost_op, std::invoke(p_cost_proj, std::ranges::subrange{p_left, p_middle})) + std::invoke(p_cost_op, std::invoke(p_cost_proj, std::ranges::subrange{p_middle, p_right})); std::invoke(p_comp_op, std::invoke(p_comp_proj, l_sum), p_cost)) {
+                auto constexpr l_impl = [](auto&& p_left, auto&& p_middle, auto&& p_right, auto&& p_cost_op, auto&& p_sum_op, auto&& p_comp_op, auto&& p_cost_proj, auto&& p_sum_proj, auto&& p_comp_proj, auto&& p_cost, auto&& p_result) {
+                    auto l_sum = std::invoke(p_sum_op, std::invoke(p_sum_proj, std::invoke(p_cost_op, std::invoke(p_cost_proj, std::ranges::subrange{p_left, p_middle}))), std::invoke(p_sum_proj, std::invoke(p_cost_op, std::invoke(p_cost_proj, std::ranges::subrange{p_middle, p_right}))));
+                    if (std::invoke(p_comp_op, std::invoke(p_comp_proj, l_sum), p_cost)) {
                         p_result = std::move(p_middle);
                         p_cost   = std::move(l_sum);
                     }
@@ -238,63 +273,41 @@ namespace osp {
                 auto l_result       = p_last;
                 auto l_current_cost = std::invoke(p_cost_operation, std::invoke(p_cost_projection, std::ranges::subrange{p_first, p_last}));
                 for (auto l_iterator = std::ranges::next(p_first); l_iterator != p_last; std::ranges::advance(l_iterator, static_cast<std::iter_difference_t<tp_input_iterator_t>>(std::intmax_t{1} + tp_downscaling), p_last))
-                    l_impl(p_first, l_iterator, p_last, p_cost_operation, p_comp_operation, p_cost_projection, p_comp_projection, l_current_cost, l_result);
+                    l_impl(p_first, l_iterator, p_last, p_cost_operation, p_sum_operation, p_comp_operation, p_cost_projection, p_sum_projection, p_comp_projection, l_current_cost, l_result);
                 if constexpr (!tp_disable_backtracking && tp_downscaling && std::bidirectional_iterator<tp_input_iterator_t>)
                     if (l_result != p_last)
                         for (auto l_iterator = std::counted_iterator{std::reverse_iterator{std::ranges::prev(l_result)}, tp_downscaling}; l_iterator != std::default_sentinel; ++l_iterator)
-                            l_impl(p_first, l_iterator.base().base(), p_last, p_cost_operation, p_comp_operation, p_cost_projection, p_comp_projection, l_current_cost, l_result);
+                            l_impl(p_first, l_iterator.base().base(), p_last, p_cost_operation, p_sum_operation, p_comp_operation, p_cost_projection, p_sum_projection, p_comp_projection, l_current_cost, l_result);
                 return l_result;
             }
             template <
                 std::ranges::input_range tp_input_range_t,
                 typename                 tp_cost_operation_t,
+                typename                 tp_sum_operation_t   = std::plus<>,
                 typename                 tp_comp_operation_t  = std::ranges::less,
                 typename                 tp_cost_projection_t = std::identity,
+                typename                 tp_sum_projection_t  = std::identity,
                 typename                 tp_comp_projection_t = std::identity
             >
             requires (
-                std::predicate<
+                binary_splitable<
+                    std::ranges::iterator_t<tp_input_range_t>,
+                    std::ranges::sentinel_t<tp_input_range_t>,
+                    tp_cost_operation_t,
+                    tp_sum_operation_t,
                     tp_comp_operation_t,
-                    std::invoke_result_t<
-                        std::plus<>,
-                        std::invoke_result_t<
-                            tp_cost_operation_t,
-                            std::invoke_result_t<
-                                tp_cost_projection_t,
-                                std::ranges::subrange<
-                                    std::ranges::iterator_t<tp_input_range_t>,
-                                    std::ranges::iterator_t<tp_input_range_t>
-                                >
-                            >
-                        >,
-                        std::invoke_result_t<
-                            tp_cost_operation_t,
-                            std::invoke_result_t<
-                                tp_cost_projection_t,
-                                std::ranges::subrange<
-                                    std::ranges::iterator_t<tp_input_range_t>,
-                                    std::ranges::sentinel_t<tp_input_range_t>
-                                >
-                            >
-                        >
-                    >,
-                    std::invoke_result_t<
-                        tp_cost_operation_t,
-                        std::invoke_result_t<
-                            tp_cost_projection_t,
-                            std::ranges::subrange<
-                                std::ranges::iterator_t<tp_input_range_t>,
-                                std::ranges::sentinel_t<tp_input_range_t>
-                            >
-                        >
-                    >
+                    tp_cost_projection_t,
+                    tp_sum_projection_t,
+                    tp_comp_projection_t
                 >
             )
             auto constexpr operator()[[nodiscard]] (
                 tp_input_range_t&&   p_range,
                 tp_cost_operation_t  p_cost_operation,
+                tp_sum_operation_t   p_sum_operation   = {},
                 tp_comp_operation_t  p_comp_operation  = {},
                 tp_cost_projection_t p_cost_projection = {},
+                tp_sum_projection_t  p_sum_projection  = {},
                 tp_comp_projection_t p_comp_projection = {}
             )
             const
@@ -303,8 +316,10 @@ namespace osp {
                     std::ranges::begin(p_range),
                     std::ranges::end(p_range),
                     std::move(p_cost_operation),
+                    std::move(p_sum_operation),
                     std::move(p_comp_operation),
                     std::move(p_cost_projection),
+                    std::move(p_sum_projection),
                     std::move(p_comp_projection)
                 );
             }
@@ -323,54 +338,32 @@ namespace osp {
                 std::input_iterator                    tp_input_iterator_t,
                 std::sentinel_for<tp_input_iterator_t> tp_sentinel_iterator_t,
                 typename                               tp_cost_operation_t,
+                typename                               tp_sum_operation_t   = std::plus<>,
                 typename                               tp_comp_operation_t  = std::ranges::less,
                 typename                               tp_cost_projection_t = std::identity,
+                typename                               tp_sum_projection_t  = std::identity,
                 typename                               tp_comp_projection_t = std::identity
             >
             requires (
-                std::predicate<
+                binary_splitable<
+                    tp_input_iterator_t,
+                    tp_sentinel_iterator_t,
+                    tp_cost_operation_t,
+                    tp_sum_operation_t,
                     tp_comp_operation_t,
-                    std::invoke_result_t<
-                        std::plus<>,
-                        std::invoke_result_t<
-                            tp_cost_operation_t,
-                            std::invoke_result_t<
-                                tp_cost_projection_t,
-                                std::ranges::subrange<
-                                    tp_input_iterator_t,
-                                    tp_input_iterator_t
-                                >
-                            >
-                        >,
-                        std::invoke_result_t<
-                            tp_cost_operation_t,
-                            std::invoke_result_t<
-                                tp_cost_projection_t,
-                                std::ranges::subrange<
-                                    tp_input_iterator_t,
-                                    tp_sentinel_iterator_t
-                                >
-                            >
-                        >
-                    >,
-                    std::invoke_result_t<
-                        tp_cost_operation_t,
-                        std::invoke_result_t<
-                            tp_cost_projection_t,
-                            std::ranges::subrange<
-                                tp_input_iterator_t,
-                                tp_sentinel_iterator_t
-                            >
-                        >
-                    >
+                    tp_cost_projection_t,
+                    tp_sum_projection_t,
+                    tp_comp_projection_t
                 >
             )
             auto constexpr operator()[[nodiscard]] (
                 tp_input_iterator_t    p_first,
                 tp_sentinel_iterator_t p_last,
                 tp_cost_operation_t    p_cost_operation,
+                tp_sum_operation_t     p_sum_operation   = {},
                 tp_comp_operation_t    p_comp_operation  = {},
                 tp_cost_projection_t   p_cost_projection = {},
+                tp_sum_projection_t    p_sum_projection  = {},
                 tp_comp_projection_t   p_comp_projection = {}
             )
             const
@@ -401,8 +394,10 @@ namespace osp {
                     p_first,
                     p_last,
                     std::move(p_cost_operation),
+                    std::move(p_sum_operation),
                     std::move(p_comp_operation),
                     std::move(p_cost_projection),
+                    std::move(p_sum_projection),
                     std::move(p_comp_projection)
                 );
                 return to_partition(
@@ -414,53 +409,31 @@ namespace osp {
             template <
                 std::ranges::input_range tp_input_range_t,
                 typename                 tp_cost_operation_t,
+                typename                 tp_sum_operation_t   = std::plus<>,
                 typename                 tp_comp_operation_t  = std::ranges::less,
                 typename                 tp_cost_projection_t = std::identity,
+                typename                 tp_sum_projection_t  = std::identity,
                 typename                 tp_comp_projection_t = std::identity
             >
             requires (
-                std::predicate<
+                binary_splitable<
+                    std::ranges::iterator_t<tp_input_range_t>,
+                    std::ranges::sentinel_t<tp_input_range_t>,
+                    tp_cost_operation_t,
+                    tp_sum_operation_t,
                     tp_comp_operation_t,
-                    std::invoke_result_t<
-                        std::plus<>,
-                        std::invoke_result_t<
-                            tp_cost_operation_t,
-                            std::invoke_result_t<
-                                tp_cost_projection_t,
-                                std::ranges::subrange<
-                                    std::ranges::iterator_t<tp_input_range_t>,
-                                    std::ranges::iterator_t<tp_input_range_t>
-                                >
-                            >
-                        >,
-                        std::invoke_result_t<
-                            tp_cost_operation_t,
-                            std::invoke_result_t<
-                                tp_cost_projection_t,
-                                std::ranges::subrange<
-                                    std::ranges::iterator_t<tp_input_range_t>,
-                                    std::ranges::sentinel_t<tp_input_range_t>
-                                >
-                            >
-                        >
-                    >,
-                    std::invoke_result_t<
-                        tp_cost_operation_t,
-                        std::invoke_result_t<
-                            tp_cost_projection_t,
-                            std::ranges::subrange<
-                                std::ranges::iterator_t<tp_input_range_t>,
-                                std::ranges::sentinel_t<tp_input_range_t>
-                            >
-                        >
-                    >
+                    tp_cost_projection_t,
+                    tp_sum_projection_t,
+                    tp_comp_projection_t
                 >
             )
             auto constexpr operator()[[nodiscard]] (
                 tp_input_range_t&&   p_range,
                 tp_cost_operation_t  p_cost_operation,
+                tp_sum_operation_t   p_sum_operation   = {},
                 tp_comp_operation_t  p_comp_operation  = {},
                 tp_cost_projection_t p_cost_projection = {},
+                tp_sum_projection_t  p_sum_projection  = {},
                 tp_comp_projection_t p_comp_projection = {}
             )
             const
@@ -478,8 +451,10 @@ namespace osp {
                     std::ranges::begin(p_range),
                     std::ranges::end(p_range),
                     std::move(p_cost_operation),
+                    std::move(p_sum_operation),
                     std::move(p_comp_operation),
                     std::move(p_cost_projection),
+                    std::move(p_sum_projection),
                     std::move(p_comp_projection)
                 );
             }
