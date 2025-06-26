@@ -36,29 +36,23 @@ namespace osp {
         concept subrange = is_subrange<std::remove_cvref_t<tp_type_t>>::value;
 
         template <typename tp_type_t>
-        struct is_subrange_pair : std::false_type {};
+        struct is_pair : std::false_type {};
         template <
-            std::input_iterator                      tp_input_itereator1_t,
-            std::sentinel_for<tp_input_itereator1_t> tp_sentinel_iterator1_t,
-            std::ranges::subrange_kind               tp_subrange_kind1,
-            std::input_iterator                      tp_input_itereator2_t,
-            std::sentinel_for<tp_input_itereator2_t> tp_sentinel_iterator2_t,
-            std::ranges::subrange_kind               tp_subrange_kind2
+            typename tp_type1_t,
+            typename tp_type2_t
         >
-        struct is_subrange_pair<std::pair<
-            std::ranges::subrange<
-                tp_input_itereator1_t,
-                tp_sentinel_iterator1_t,
-                tp_subrange_kind1
-            >,
-            std::ranges::subrange<
-                tp_input_itereator2_t,
-                tp_sentinel_iterator2_t,
-                tp_subrange_kind2
-            >
+        struct is_pair<std::pair<
+            tp_type1_t,
+            tp_type2_t
         >> : std::true_type {};
         template <typename tp_type_t>
-        concept subrange_pair = is_subrange_pair<std::remove_cvref_t<tp_type_t>>::value;
+        concept pair = is_pair<std::remove_cvref_t<tp_type_t>>::value;
+
+        template <typename tp_type_t>
+        concept subrange_pair =
+            pair<tp_type_t> &&
+            subrange<typename std::remove_cvref_t<tp_type_t>::first_type> &&
+            subrange<typename std::remove_cvref_t<tp_type_t>::second_type>;
     }
 
     namespace detail {
@@ -181,7 +175,7 @@ namespace osp {
                 std::input_iterator                    tp_input_iterator_t,
                 std::sentinel_for<tp_input_iterator_t> tp_sentinel_iterator_t,
                 typename                               tp_cost_operation_t,
-                typename                               tp_comp_operation_t  = std::less<>,
+                typename                               tp_comp_operation_t  = std::ranges::less,
                 typename                               tp_cost_projection_t = std::identity,
                 typename                               tp_comp_projection_t = std::identity
             >
@@ -254,7 +248,7 @@ namespace osp {
             template <
                 std::ranges::input_range tp_input_range_t,
                 typename                 tp_cost_operation_t,
-                typename                 tp_comp_operation_t  = std::less<>,
+                typename                 tp_comp_operation_t  = std::ranges::less,
                 typename                 tp_cost_projection_t = std::identity,
                 typename                 tp_comp_projection_t = std::identity
             >
@@ -329,7 +323,7 @@ namespace osp {
                 std::input_iterator                    tp_input_iterator_t,
                 std::sentinel_for<tp_input_iterator_t> tp_sentinel_iterator_t,
                 typename                               tp_cost_operation_t,
-                typename                               tp_comp_operation_t  = std::less<>,
+                typename                               tp_comp_operation_t  = std::ranges::less,
                 typename                               tp_cost_projection_t = std::identity,
                 typename                               tp_comp_projection_t = std::identity
             >
@@ -420,7 +414,7 @@ namespace osp {
             template <
                 std::ranges::input_range tp_input_range_t,
                 typename                 tp_cost_operation_t,
-                typename                 tp_comp_operation_t  = std::less<>,
+                typename                 tp_comp_operation_t  = std::ranges::less,
                 typename                 tp_cost_projection_t = std::identity,
                 typename                 tp_comp_projection_t = std::identity
             >
