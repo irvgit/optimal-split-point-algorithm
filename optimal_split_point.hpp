@@ -20,6 +20,160 @@
 
 namespace osp {
     namespace detail {
+        template <typename tp_type_t>
+        struct is_subrange : std::false_type {};
+        template <
+            std::input_iterator                      tp_input_itereator_t,
+            std::sentinel_for<tp_input_itereator_t> tp_sentinel_iterator_t,
+            std::ranges::subrange_kind               tp_subrange_kind
+        >
+        struct is_subrange<std::ranges::subrange<
+            tp_input_itereator_t,
+            tp_sentinel_iterator_t,
+            tp_subrange_kind
+        >> : std::true_type {};
+        template <typename tp_type_t>
+        concept subrange = is_subrange<std::remove_cvref_t<tp_type_t>>::value;
+
+        template <typename tp_type_t>
+        struct is_subrange_pair : std::false_type {};
+        template <
+            std::input_iterator                      tp_input_itereator1_t,
+            std::sentinel_for<tp_input_itereator1_t> tp_sentinel_iterator1_t,
+            std::ranges::subrange_kind               tp_subrange_kind1,
+            std::input_iterator                      tp_input_itereator2_t,
+            std::sentinel_for<tp_input_itereator2_t> tp_sentinel_iterator2_t,
+            std::ranges::subrange_kind               tp_subrange_kind2
+        >
+        struct is_subrange_pair<std::pair<
+            std::ranges::subrange<
+                tp_input_itereator1_t,
+                tp_sentinel_iterator1_t,
+                tp_subrange_kind1
+            >,
+            std::ranges::subrange<
+                tp_input_itereator2_t,
+                tp_sentinel_iterator2_t,
+                tp_subrange_kind2
+            >
+        >> : std::true_type {};
+        template <typename tp_type_t>
+        concept subrange_pair = is_subrange_pair<std::remove_cvref_t<tp_type_t>>::value;
+    }
+
+    namespace detail {
+        struct to_split_point_fn {
+            template <
+                subrange tp_subrange1_t,
+                subrange tp_subrange2_t
+            >
+            auto constexpr operator()[[nodiscard]] (
+                tp_subrange1_t p_partition_left,
+                tp_subrange2_t p_partition_right
+            )
+            const
+            -> std::ranges::sentinel_t<tp_subrange1_t> {
+                return std::ranges::end(p_partition_left);
+            }
+            template <subrange_pair tp_subrange_pair_t>
+            auto constexpr operator()[[nodiscard]] (tp_subrange_pair_t&& p_partition)
+            const
+            -> std::ranges::sentinel_t<typename std::remove_cvref_t<tp_subrange_pair_t>::first_type> {
+                return (*this)(
+                    p_partition.first,
+                    p_partition.second
+                );
+            }
+        };
+    }
+    auto constexpr to_split_point = detail::to_split_point_fn{};
+    
+    namespace detail {
+        struct to_partition_fn {
+            template <
+                std::input_iterator                     tp_input_iterator1_t,
+                std::sentinel_for<tp_input_iterator1_t> tp_sentinel_iterator_t,
+                std::input_iterator                     tp_input_iterator2_t
+            >
+            requires (
+                std::sentinel_for<
+                    tp_input_iterator2_t,
+                    tp_sentinel_iterator_t
+                >
+            )
+            auto constexpr operator()[[nodiscard]] (
+                tp_input_iterator1_t   p_first,
+                tp_sentinel_iterator_t p_last,
+                tp_input_iterator2_t   p_split_point
+            )
+            const
+            -> std::pair<
+                std::ranges::subrange<
+                    tp_input_iterator1_t,
+                    tp_input_iterator2_t
+                >,
+                std::ranges::subrange<
+                    tp_input_iterator2_t,
+                    tp_sentinel_iterator_t
+                >
+            > {
+                using return_type = std::pair<
+                    std::ranges::subrange<
+                        tp_input_iterator1_t,
+                        tp_input_iterator2_t
+                    >,
+                    std::ranges::subrange<
+                        tp_input_iterator2_t,
+                        tp_sentinel_iterator_t
+                    >
+                >;
+                return return_type{
+                    typename return_type::first_type{
+                        std::move(p_first),
+                        p_split_point
+                    },
+                    typename return_type::second_type{
+                        std::move(p_split_point),
+                        std::move(p_last)
+                    }
+                };
+            }
+            template <
+                std::ranges::input_range tp_input_range_t,
+                std::input_iterator      tp_input_iterator_t
+            >
+            requires (
+                std::sentinel_for<
+                    tp_input_iterator_t,
+                    std::ranges::sentinel_t<tp_input_range_t>
+                >
+            )
+            auto constexpr operator()[[nodiscard]] (
+                tp_input_range_t&&  p_range,
+                tp_input_iterator_t p_split_point
+            )
+            const
+            -> std::pair<
+                std::ranges::subrange<
+                    std::ranges::iterator_t<tp_input_range_t>,
+                    tp_input_iterator_t
+                >,
+                std::ranges::subrange<
+                    tp_input_iterator_t,
+                    std::ranges::sentinel_t<tp_input_range_t>
+                >
+            > {
+                return (*this)(
+                    std::ranges::begin(p_range),
+                    std::ranges::end(p_range),
+                    std::move(p_split_point)
+                );
+            }
+        };
+    }
+    auto constexpr to_partition = detail::to_partition_fn{};
+    
+    namespace detail {
         template <std::intmax_t tp_downscaling, bool tp_disable_backtracking>
         requires (std::cmp_greater_equal(tp_downscaling, 0))
         struct efficient_binary_split_point_fn {
@@ -257,16 +411,11 @@ namespace osp {
                     std::move(p_cost_projection),
                     std::move(p_comp_projection)
                 );
-                return return_type{
-                    typename return_type::first_type{
-                        std::move(p_first),
-                        l_splt_point
-                    },
-                    typename return_type::second_type{
-                        std::move(l_splt_point),
-                        std::move(p_last)
-                    }
-                };
+                return to_partition(
+                    std::move(p_first),
+                    std::move(p_last),
+                    std::move(l_splt_point)
+                );
             }
             template <
                 std::ranges::input_range tp_input_range_t,
