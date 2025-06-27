@@ -54,62 +54,63 @@ namespace osp {
             subrange<typename std::remove_cvref_t<tp_type_t>::first_type> &&
             subrange<typename std::remove_cvref_t<tp_type_t>::second_type>;
 
-        template <
-            typename tp_input_iterator_t,
-            typename tp_sentinel_iterator_t,
-            typename tp_cost_operation_t,
-            typename tp_sum_operation_t,
-            typename tp_comp_operation_t,
-            typename tp_cost_projection_t,
-            typename tp_sum_projection_t,
-            typename tp_comp_projection_t
-        >
-        concept binary_splitable = std::predicate<
-            tp_comp_operation_t,
+    }
+
+    template <
+        typename tp_input_iterator_t,
+        typename tp_sentinel_iterator_t,
+        typename tp_cost_operation_t,
+        typename tp_sum_operation_t,
+        typename tp_comp_operation_t,
+        typename tp_cost_projection_t,
+        typename tp_sum_projection_t,
+        typename tp_comp_projection_t
+    >
+    concept binary_splitable = std::predicate<
+        tp_comp_operation_t,
+        std::invoke_result_t<
+            tp_comp_projection_t,
             std::invoke_result_t<
-                tp_comp_projection_t,
+                tp_sum_operation_t,
                 std::invoke_result_t<
-                    tp_sum_operation_t,
+                    tp_sum_projection_t,
                     std::invoke_result_t<
-                        tp_sum_projection_t,
+                        tp_cost_operation_t,
                         std::invoke_result_t<
-                            tp_cost_operation_t,
-                            std::invoke_result_t<
-                                tp_cost_projection_t,
-                                std::ranges::subrange<
-                                    tp_input_iterator_t,
-                                    tp_input_iterator_t
-                                >
-                            >
-                        >
-                    >,
-                    std::invoke_result_t<
-                        tp_sum_projection_t,
-                        std::invoke_result_t<
-                            tp_cost_operation_t,
-                            std::invoke_result_t<
-                                tp_cost_projection_t,
-                                std::ranges::subrange<
-                                    tp_input_iterator_t,
-                                    tp_sentinel_iterator_t
-                                >
+                            tp_cost_projection_t,
+                            std::ranges::subrange<
+                                tp_input_iterator_t,
+                                tp_input_iterator_t
                             >
                         >
                     >
-                >
-            >,
-            std::invoke_result_t<
-                tp_cost_operation_t,
+                >,
                 std::invoke_result_t<
-                    tp_cost_projection_t,
-                    std::ranges::subrange<
-                        tp_input_iterator_t,
-                        tp_sentinel_iterator_t
+                    tp_sum_projection_t,
+                    std::invoke_result_t<
+                        tp_cost_operation_t,
+                        std::invoke_result_t<
+                            tp_cost_projection_t,
+                            std::ranges::subrange<
+                                tp_input_iterator_t,
+                                tp_sentinel_iterator_t
+                            >
+                        >
                     >
                 >
             >
-        >;
-    }
+        >,
+        std::invoke_result_t<
+            tp_cost_operation_t,
+            std::invoke_result_t<
+                tp_cost_projection_t,
+                std::ranges::subrange<
+                    tp_input_iterator_t,
+                    tp_sentinel_iterator_t
+                >
+            >
+        >
+    >;
 
     namespace detail {
         struct to_split_point_fn {
