@@ -238,8 +238,16 @@ namespace osp {
     auto constexpr is_invalid_partition = std::not_fn(is_valid_partition);
     
     namespace detail {
-        template <std::intmax_t tp_downscaling, bool tp_disable_backtracking>
-        requires (std::cmp_greater_equal(tp_downscaling, 0))
+        template <
+            std::intmax_t tp_downscaling,
+            bool          tp_disable_backtracking
+        >
+        requires (
+            std::cmp_greater_equal(
+                tp_downscaling,
+                0
+            )
+        )
         struct efficient_binary_split_point_fn {
             template <
                 std::input_iterator                    tp_input_iterator_t,
@@ -339,14 +347,33 @@ namespace osp {
             }
         };
     }
-    template <std::intmax_t tp_downscaling = 0, bool tp_disable_backtracking = false>
-    requires (std::cmp_greater_equal(tp_downscaling, 0))
-    auto constexpr efficient_binary_split_point = detail::efficient_binary_split_point_fn<tp_downscaling, tp_disable_backtracking>{};
+    template <
+        std::intmax_t tp_downscaling          = 0,
+        bool          tp_disable_backtracking = false
+    >
+    requires (
+        std::cmp_greater_equal(
+            tp_downscaling,
+            0
+        )
+    )
+    auto constexpr efficient_binary_split_point = detail::efficient_binary_split_point_fn<
+        tp_downscaling,
+        tp_disable_backtracking
+    >{};
     auto constexpr optimal_binary_split_point   = efficient_binary_split_point<0>;    
 
     namespace detail {
-        template <std::intmax_t tp_downscaling, bool tp_disable_backtracking>
-        requires (std::cmp_greater_equal(tp_downscaling, 0))
+        template <
+            std::intmax_t tp_downscaling,
+            bool          tp_disable_backtracking
+        >
+        requires (
+            std::cmp_greater_equal(
+                tp_downscaling,
+                0
+            )
+        )
         struct efficient_binary_split_fn {
             template <
                 std::input_iterator                    tp_input_iterator_t,
@@ -474,9 +501,20 @@ namespace osp {
             }
         };
     }
-    template <std::intmax_t tp_downscaling = 0, bool tp_disable_backtracking = false>
-    requires (std::cmp_greater_equal(tp_downscaling, 0))
-    auto constexpr efficient_binary_split = detail::efficient_binary_split_fn<tp_downscaling, tp_disable_backtracking>{};
+    template <
+        std::intmax_t tp_downscaling          = 0,
+        bool          tp_disable_backtracking = false
+    >
+    requires (
+        std::cmp_greater_equal(
+            tp_downscaling,
+            0
+        )
+    )
+    auto constexpr efficient_binary_split = detail::efficient_binary_split_fn<
+        tp_downscaling,
+        tp_disable_backtracking
+    >{};
     auto constexpr optimal_binary_split   = efficient_binary_split<0>;
 }
 
