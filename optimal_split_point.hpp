@@ -223,6 +223,19 @@ namespace osp {
         };
     }
     auto constexpr to_partition = detail::to_partition_fn{};
+
+    namespace detail {
+        struct is_valid_partition_fn {
+            template <subrange_pair tp_subrange_pair_t>
+            auto constexpr operator()[[nodiscard]] (tp_subrange_pair_t&& p_partition)
+            const
+            -> bool {
+                return !std::ranges::empty(p_partition.first);
+            }
+        };
+    }
+    auto constexpr is_valid_partition   = detail::is_valid_partition_fn{};
+    auto constexpr is_invalid_partition = std::not_fn(is_valid_partition);
     
     namespace detail {
         template <std::intmax_t tp_downscaling, bool tp_disable_backtracking>
