@@ -54,6 +54,14 @@ namespace osp {
             subrange<typename std::remove_cvref_t<tp_type_t>::first_type> &&
             subrange<typename std::remove_cvref_t<tp_type_t>::second_type>;
 
+        template <typename tp_type_t>
+        concept partition =
+            subrange_pair<tp_type_t> &&
+            std::ranges::common_range<typename std::remove_cvref_t<tp_type_t>::first_type> &&
+            std::same_as<
+                std::ranges::iterator_t<typename std::remove_cvref_t<tp_type_t>::first_type>,
+                std::ranges::iterator_t<typename std::remove_cvref_t<tp_type_t>::second_type>
+            >;
     }
 
     template <
@@ -126,10 +134,10 @@ namespace osp {
             -> std::ranges::sentinel_t<tp_subrange1_t> {
                 return std::ranges::end(p_partition_left);
             }
-            template <subrange_pair tp_subrange_pair_t>
-            auto constexpr operator()[[nodiscard]] (tp_subrange_pair_t&& p_partition)
+            template <partition tp_partition_t>
+            auto constexpr operator()[[nodiscard]] (tp_partition_t&& p_partition)
             const
-            -> std::ranges::sentinel_t<typename std::remove_cvref_t<tp_subrange_pair_t>::first_type> {
+            -> std::ranges::sentinel_t<typename std::remove_cvref_t<tp_partition_t>::first_type> {
                 return (*this)(
                     p_partition.first,
                     p_partition.second
@@ -225,9 +233,45 @@ namespace osp {
     auto constexpr to_partition = detail::to_partition_fn{};
 
     namespace detail {
+        struct merge_partition_fn {
+            template <
+                subrange tp_subrange1_t,
+                subrange tp_subrange2_t
+            >
+            auto constexpr operator()[[nodiscard]] (
+                tp_subrange1_t p_partition_left,
+                tp_subrange2_t p_partition_right
+            )
+            const
+            -> std::ranges::subrange<
+                std::ranges::iterator_t<tp_subrange1_t>,
+                std::ranges::sentinel_t<tp_subrange2_t>
+            > {
+                return std::ranges::subrange{
+                    std::ranges::begin(p_partition_left),
+                    std::ranges::end(p_partition_right)
+                };
+            }
+            template <partition tp_partition_t>
+            auto constexpr operator()[[nodiscard]] (tp_partition_t&& p_partition)
+            const
+            -> std::ranges::subrange<
+                std::ranges::iterator_t<typename std::remove_cvref_t<tp_partition_t>::first_type>,
+                std::ranges::sentinel_t<typename std::remove_cvref_t<tp_partition_t>::second_type>
+            > {
+                return (*this)(
+                    p_partition.first,
+                    p_partition.second
+                );
+            }
+        };
+    }
+    auto constexpr merge_partition = detail::merge_partition_fn{};
+
+    namespace detail {
         struct is_valid_partition_fn {
-            template <subrange_pair tp_subrange_pair_t>
-            auto constexpr operator()[[nodiscard]] (tp_subrange_pair_t&& p_partition)
+            template <partition tp_partition_t>
+            auto constexpr operator()[[nodiscard]] (tp_partition_t&& p_partition)
             const
             -> bool {
                 return !std::ranges::empty(p_partition.first);
