@@ -62,6 +62,11 @@ namespace osp {
                 std::ranges::iterator_t<typename std::remove_cvref_t<tp_type_t>::first_type>,
                 std::ranges::iterator_t<typename std::remove_cvref_t<tp_type_t>::second_type>
             >;
+
+        template <typename tp_type_t>
+        concept common_partition =
+            partition<tp_type_t> &&
+            std::ranges::common_range<typename std::remove_cvref_t<tp_type_t>::second_type>;
     }
 
     template <
@@ -130,13 +135,20 @@ namespace osp {
                 tp_subrange1_t p_partition_left,
                 tp_subrange2_t p_partition_right
             )
-            const
+            const noexcept(noexcept(
+                std::ranges::end(p_partition_left)
+            ))
             -> std::ranges::sentinel_t<tp_subrange1_t> {
                 return std::ranges::end(p_partition_left);
             }
             template <partition tp_partition_t>
             auto constexpr operator()[[nodiscard]] (tp_partition_t&& p_partition)
-            const
+            const noexcept(noexcept(
+                (*this)(
+                    p_partition.first,
+                    p_partition.second
+                )
+            ))
             -> std::ranges::sentinel_t<typename std::remove_cvref_t<tp_partition_t>::first_type> {
                 return (*this)(
                     p_partition.first,
@@ -165,7 +177,33 @@ namespace osp {
                 tp_sentinel_iterator_t p_last,
                 tp_input_iterator2_t   p_split_point
             )
-            const
+            const noexcept(noexcept(
+                std::pair<
+                    std::ranges::subrange<
+                        tp_input_iterator1_t,
+                        tp_input_iterator2_t
+                    >,
+                    std::ranges::subrange<
+                        tp_input_iterator2_t,
+                        tp_sentinel_iterator_t
+                    >
+                >{
+                    std::ranges::subrange<
+                        tp_input_iterator1_t,
+                        tp_input_iterator2_t
+                    >{
+                        std::move(p_first),
+                        p_split_point
+                    },
+                    std::ranges::subrange<
+                        tp_input_iterator2_t,
+                        tp_sentinel_iterator_t
+                    >{
+                        std::move(p_split_point),
+                        std::move(p_last)
+                    }
+                }
+            ))
             -> std::pair<
                 std::ranges::subrange<
                     tp_input_iterator1_t,
@@ -211,7 +249,13 @@ namespace osp {
                 tp_input_range_t&&  p_range,
                 tp_input_iterator_t p_split_point
             )
-            const
+            const noexcept(noexcept(
+                (*this)(
+                    std::ranges::begin(p_range),
+                    std::ranges::end(p_range),
+                    std::move(p_split_point)
+                )
+            ))
             -> std::pair<
                 std::ranges::subrange<
                     std::ranges::iterator_t<tp_input_range_t>,
@@ -242,7 +286,12 @@ namespace osp {
                 tp_subrange1_t p_partition_left,
                 tp_subrange2_t p_partition_right
             )
-            const
+            const noexcept(noexcept(
+                std::ranges::subrange{
+                    std::ranges::begin(p_partition_left),
+                    std::ranges::end(p_partition_right)
+                }
+            ))
             -> std::ranges::subrange<
                 std::ranges::iterator_t<tp_subrange1_t>,
                 std::ranges::sentinel_t<tp_subrange2_t>
@@ -254,7 +303,12 @@ namespace osp {
             }
             template <partition tp_partition_t>
             auto constexpr operator()[[nodiscard]] (tp_partition_t&& p_partition)
-            const
+            const noexcept(noexcept(
+                (*this)(
+                    p_partition.first,
+                    p_partition.second
+                )
+            ))
             -> std::ranges::subrange<
                 std::ranges::iterator_t<typename std::remove_cvref_t<tp_partition_t>::first_type>,
                 std::ranges::sentinel_t<typename std::remove_cvref_t<tp_partition_t>::second_type>
@@ -272,7 +326,7 @@ namespace osp {
         struct is_valid_partition_fn {
             template <partition tp_partition_t>
             auto constexpr operator()[[nodiscard]] (tp_partition_t&& p_partition)
-            const
+            const noexcept(noexcept(!std::ranges::empty(p_partition.first)))
             -> bool {
                 return !std::ranges::empty(p_partition.first);
             }
@@ -280,6 +334,18 @@ namespace osp {
     }
     auto constexpr is_valid_partition   = detail::is_valid_partition_fn{};
     auto constexpr is_invalid_partition = std::not_fn(is_valid_partition);
+
+    namespace detail {
+        struct is_common_partition_fn {
+            template <partition tp_partition_t>
+            auto constexpr operator()[[nodiscard]] (tp_partition_t&& p_partition)
+            const noexcept
+            -> bool {
+                return common_partition<tp_partition_t>;
+            }
+        };
+    }
+    auto constexpr is_common_partition = detail::is_common_partition_fn{};
     
     namespace detail {
         template <
