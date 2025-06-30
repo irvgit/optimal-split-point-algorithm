@@ -329,7 +329,7 @@ namespace osp {
             -> tp_input_iterator_t {
                 auto constexpr l_impl = [](auto&& p_left, auto&& p_middle, auto&& p_right, auto&& p_cost_op, auto&& p_sum_op, auto&& p_comp_op, auto&& p_cost_proj, auto&& p_sum_proj, auto&& p_comp_proj, auto&& p_cost, auto&& p_result) {
                     auto l_sum = std::invoke(p_sum_op, std::invoke(p_sum_proj, std::invoke(p_cost_op, std::invoke(p_cost_proj, std::ranges::subrange{p_left, p_middle}))), std::invoke(p_sum_proj, std::invoke(p_cost_op, std::invoke(p_cost_proj, std::ranges::subrange{p_middle, p_right}))));
-                    if (std::invoke(p_comp_op, std::invoke(p_comp_proj, l_sum), p_cost)) {
+                    if (std::invoke(p_comp_op, std::invoke(p_comp_proj, l_sum), std::invoke(p_comp_proj, p_cost))) {
                         p_result = std::move(p_middle);
                         p_cost   = std::move(l_sum);
                     }
