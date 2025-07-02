@@ -162,41 +162,40 @@ namespace osp {
     namespace detail {
         struct to_partition_fn {
             template <
-                std::input_iterator                     tp_input_iterator1_t,
-                std::sentinel_for<tp_input_iterator1_t> tp_sentinel_iterator_t,
-                std::input_iterator                     tp_input_iterator2_t
+                std::input_iterator                    tp_input_iterator_t,
+                std::sentinel_for<tp_input_iterator_t> tp_sentinel_iterator_t
             >
             requires (
                 std::sentinel_for<
-                    tp_input_iterator2_t,
+                    tp_input_iterator_t,
                     tp_sentinel_iterator_t
                 >
             )
             auto constexpr operator()[[nodiscard]] (
-                tp_input_iterator1_t   p_first,
+                tp_input_iterator_t    p_first,
                 tp_sentinel_iterator_t p_last,
-                tp_input_iterator2_t   p_split_point
+                tp_input_iterator_t    p_split_point
             )
             const noexcept(noexcept(
                 std::pair<
                     std::ranges::subrange<
-                        tp_input_iterator1_t,
-                        tp_input_iterator2_t
+                        tp_input_iterator_t,
+                        tp_input_iterator_t
                     >,
                     std::ranges::subrange<
-                        tp_input_iterator2_t,
+                        tp_input_iterator_t,
                         tp_sentinel_iterator_t
                     >
                 >{
                     std::ranges::subrange<
-                        tp_input_iterator1_t,
-                        tp_input_iterator2_t
+                        tp_input_iterator_t,
+                        tp_input_iterator_t
                     >{
-                        std::move(p_first),
+                        p_split_point == p_last ? p_split_point : std::move(p_first),
                         p_split_point
                     },
                     std::ranges::subrange<
-                        tp_input_iterator2_t,
+                        tp_input_iterator_t,
                         tp_sentinel_iterator_t
                     >{
                         std::move(p_split_point),
@@ -206,27 +205,27 @@ namespace osp {
             ))
             -> std::pair<
                 std::ranges::subrange<
-                    tp_input_iterator1_t,
-                    tp_input_iterator2_t
+                    tp_input_iterator_t,
+                    tp_input_iterator_t
                 >,
                 std::ranges::subrange<
-                    tp_input_iterator2_t,
+                    tp_input_iterator_t,
                     tp_sentinel_iterator_t
                 >
             > {
                 using return_type = std::pair<
                     std::ranges::subrange<
-                        tp_input_iterator1_t,
-                        tp_input_iterator2_t
+                        tp_input_iterator_t,
+                        tp_input_iterator_t
                     >,
                     std::ranges::subrange<
-                        tp_input_iterator2_t,
+                        tp_input_iterator_t,
                         tp_sentinel_iterator_t
                     >
                 >;
                 return return_type{
                     typename return_type::first_type{
-                        std::move(p_first),
+                        p_split_point == p_last ? p_split_point : std::move(p_first),
                         p_split_point
                     },
                     typename return_type::second_type{
