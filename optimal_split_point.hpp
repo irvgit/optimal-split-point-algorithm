@@ -319,12 +319,12 @@ namespace osp {
     
     namespace detail {
         template <
-            std::intmax_t tp_downscaling,
-            bool          tp_disable_backtracking
+            std::intmax_t tp_jump_search_interval,
+            bool          tp_enable_linear_search
         >
         requires (
             std::cmp_greater_equal(
-                tp_downscaling,
+                tp_jump_search_interval,
                 0
             )
         )
@@ -375,14 +375,14 @@ namespace osp {
                 auto l_result          = p_last;
                 auto l_current_cost    = std::invoke(p_cost_operation, std::invoke(p_cost_projection, std::ranges::subrange{p_first, p_last}));
                 auto l_one_before_last = std::ranges::prev(p_last);
-                for (auto l_iterator = std::ranges::next(p_first); l_iterator != l_one_before_last; std::ranges::advance(l_iterator, static_cast<std::iter_difference_t<tp_input_iterator_t>>(std::intmax_t{1} + tp_downscaling), l_one_before_last))
+                for (auto l_iterator = std::ranges::next(p_first); l_iterator != l_one_before_last; std::ranges::advance(l_iterator, static_cast<std::iter_difference_t<tp_input_iterator_t>>(std::intmax_t{1} + tp_jump_search_interval), l_one_before_last))
                     l_impl(p_first, l_iterator, p_last, p_cost_operation, p_sum_operation, p_comp_operation, p_cost_projection, p_sum_projection, p_comp_projection, l_current_cost, l_result);
-                if constexpr (!tp_disable_backtracking && tp_downscaling)
+                if constexpr (tp_enable_linear_search && tp_jump_search_interval)
                     if (l_result != p_last) {
-                        for (auto l_iterator = std::counted_iterator{std::ranges::next(l_result), tp_downscaling}; l_iterator != std::default_sentinel && l_iterator.base() != p_last; ++l_iterator)
+                        for (auto l_iterator = std::counted_iterator{std::ranges::next(l_result), tp_jump_search_interval}; l_iterator != std::default_sentinel && l_iterator.base() != p_last; ++l_iterator)
                             l_impl(p_first, l_iterator.base(), p_last, p_cost_operation, p_sum_operation, p_comp_operation, p_cost_projection, p_sum_projection, p_comp_projection, l_current_cost, l_result);
                         if constexpr (std::bidirectional_iterator<tp_input_iterator_t>)
-                            for (auto l_iterator = std::counted_iterator{std::reverse_iterator{std::ranges::prev(l_result)}, tp_downscaling}; l_iterator != std::default_sentinel; ++l_iterator) {
+                            for (auto l_iterator = std::counted_iterator{std::reverse_iterator{std::ranges::prev(l_result)}, tp_jump_search_interval}; l_iterator != std::default_sentinel; ++l_iterator) {
                                 l_impl(p_first, l_iterator.base().base(), p_last, p_cost_operation, p_sum_operation, p_comp_operation, p_cost_projection, p_sum_projection, p_comp_projection, l_current_cost, l_result);
                                 if (l_iterator.base().base() == p_first)
                                     break;
@@ -436,29 +436,29 @@ namespace osp {
         };
     }
     template <
-        std::intmax_t tp_downscaling          = 0,
-        bool          tp_disable_backtracking = false
+        std::intmax_t tp_jump_search_interval = 0,
+        bool          tp_enable_linear_search = true
     >
     requires (
         std::cmp_greater_equal(
-            tp_downscaling,
+            tp_jump_search_interval,
             0
         )
     )
     auto constexpr efficient_binary_split_point = detail::efficient_binary_split_point_fn<
-        tp_downscaling,
-        tp_disable_backtracking
+        tp_jump_search_interval,
+        tp_enable_linear_search
     >{};
     auto constexpr optimal_binary_split_point   = efficient_binary_split_point<0>;    
 
     namespace detail {
         template <
-            std::intmax_t tp_downscaling,
-            bool          tp_disable_backtracking
+            std::intmax_t tp_jump_search_interval,
+            bool          tp_enable_linear_search
         >
         requires (
             std::cmp_greater_equal(
-                tp_downscaling,
+                tp_jump_search_interval,
                 0
             )
         )
@@ -517,8 +517,8 @@ namespace osp {
                     >
                 >;
                 auto l_splt_point = efficient_binary_split_point<
-                    tp_downscaling,
-                    tp_disable_backtracking
+                    tp_jump_search_interval,
+                    tp_enable_linear_search
                 > (
                     p_first,
                     p_last,
@@ -590,18 +590,18 @@ namespace osp {
         };
     }
     template <
-        std::intmax_t tp_downscaling          = 0,
-        bool          tp_disable_backtracking = false
+        std::intmax_t tp_jump_search_interval  = 0,
+        bool          tp_enable_linear_search = true
     >
     requires (
         std::cmp_greater_equal(
-            tp_downscaling,
+            tp_jump_search_interval,
             0
         )
     )
     auto constexpr efficient_binary_split = detail::efficient_binary_split_fn<
-        tp_downscaling,
-        tp_disable_backtracking
+        tp_jump_search_interval,
+        tp_enable_linear_search
     >{};
     auto constexpr optimal_binary_split   = efficient_binary_split<0>;
 }
