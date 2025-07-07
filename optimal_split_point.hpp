@@ -127,33 +127,13 @@ namespace osp {
 
     namespace detail {
         struct to_split_point_fn {
-            template <
-                subrange tp_subrange1_t,
-                subrange tp_subrange2_t
-            >
-            auto constexpr operator()[[nodiscard]] (
-                tp_subrange1_t p_partition_left,
-                tp_subrange2_t p_partition_right
-            )
-            const noexcept(noexcept(
-                std::ranges::end(p_partition_left)
-            ))
-            -> std::ranges::sentinel_t<tp_subrange1_t> {
-                return std::ranges::end(p_partition_left);
-            }
             template <partition tp_partition_t>
             auto constexpr operator()[[nodiscard]] (tp_partition_t&& p_partition)
             const noexcept(noexcept(
-                (*this)(
-                    p_partition.first,
-                    p_partition.second
-                )
+                std::ranges::end(p_partition.first)
             ))
             -> std::ranges::sentinel_t<typename std::remove_cvref_t<tp_partition_t>::first_type> {
-                return (*this)(
-                    p_partition.first,
-                    p_partition.second
-                );
+                return std::ranges::end(p_partition.first);
             }
         };
     }
@@ -191,7 +171,7 @@ namespace osp {
                         tp_input_iterator_t,
                         tp_input_iterator_t
                     >{
-                        p_split_point == p_last ? p_split_point : std::move(p_first),
+                        std::move(p_first),
                         p_split_point
                     },
                     std::ranges::subrange<
@@ -225,7 +205,7 @@ namespace osp {
                 >;
                 return return_type{
                     typename return_type::first_type{
-                        p_split_point == p_last ? p_split_point : std::move(p_first),
+                        std::move(p_first),
                         p_split_point
                     },
                     typename return_type::second_type{
@@ -234,19 +214,10 @@ namespace osp {
                     }
                 };
             }
-            template <
-                std::ranges::input_range tp_input_range_t,
-                std::input_iterator      tp_input_iterator_t
-            >
-            requires (
-                std::sentinel_for<
-                    tp_input_iterator_t,
-                    std::ranges::sentinel_t<tp_input_range_t>
-                >
-            )
+            template <std::ranges::input_range tp_input_range_t>
             auto constexpr operator()[[nodiscard]] (
-                tp_input_range_t&&  p_range,
-                tp_input_iterator_t p_split_point
+                tp_input_range_t&&                        p_range,
+                std::ranges::iterator_t<tp_input_range_t> p_split_point
             )
             const noexcept(noexcept(
                 (*this)(
@@ -258,10 +229,10 @@ namespace osp {
             -> std::pair<
                 std::ranges::subrange<
                     std::ranges::iterator_t<tp_input_range_t>,
-                    tp_input_iterator_t
+                    std::ranges::iterator_t<tp_input_range_t>
                 >,
                 std::ranges::subrange<
-                    tp_input_iterator_t,
+                    std::ranges::iterator_t<tp_input_range_t>,
                     std::ranges::sentinel_t<tp_input_range_t>
                 >
             > {
@@ -325,9 +296,9 @@ namespace osp {
         struct is_valid_partition_fn {
             template <partition tp_partition_t>
             auto constexpr operator()[[nodiscard]] (tp_partition_t&& p_partition)
-            const noexcept(noexcept(!std::ranges::empty(p_partition.first)))
+            const noexcept(noexcept(!std::ranges::empty(p_partition.second)))
             -> bool {
-                return !std::ranges::empty(p_partition.first);
+                return !std::ranges::empty(p_partition.second);
             }
         };
     }
@@ -399,16 +370,20 @@ namespace osp {
                         p_cost   = std::move(l_sum);
                     }
                 };
-                if (p_first == p_last || std::ranges::next(p_first) == p_last)
+                if (p_first == p_last || std::ranges::next(p_first) == p_last || std::ranges::next(p_first, 2) == p_last)
                     return p_last;
-                auto l_result       = p_last;
-                auto l_current_cost = std::invoke(p_cost_operation, std::invoke(p_cost_projection, std::ranges::subrange{p_first, p_last}));
-                for (auto l_iterator = std::ranges::next(p_first); l_iterator != p_last; std::ranges::advance(l_iterator, static_cast<std::iter_difference_t<tp_input_iterator_t>>(std::intmax_t{1} + tp_downscaling), p_last))
+                auto l_result          = p_last;
+                auto l_current_cost    = std::invoke(p_cost_operation, std::invoke(p_cost_projection, std::ranges::subrange{p_first, p_last}));
+                auto l_one_before_last = std::ranges::prev(p_last);
+                for (auto l_iterator = std::ranges::next(p_first); l_iterator != l_one_before_last; std::ranges::advance(l_iterator, static_cast<std::iter_difference_t<tp_input_iterator_t>>(std::intmax_t{1} + tp_downscaling), l_one_before_last))
                     l_impl(p_first, l_iterator, p_last, p_cost_operation, p_sum_operation, p_comp_operation, p_cost_projection, p_sum_projection, p_comp_projection, l_current_cost, l_result);
                 if constexpr (!tp_disable_backtracking && tp_downscaling && std::bidirectional_iterator<tp_input_iterator_t>)
                     if (l_result != p_last)
-                        for (auto l_iterator = std::counted_iterator{std::reverse_iterator{std::ranges::prev(l_result)}, tp_downscaling}; l_iterator != std::default_sentinel; ++l_iterator)
+                        for (auto l_iterator = std::counted_iterator{std::reverse_iterator{std::ranges::prev(l_result)}, tp_downscaling}; l_iterator != std::default_sentinel; ++l_iterator) {
                             l_impl(p_first, l_iterator.base().base(), p_last, p_cost_operation, p_sum_operation, p_comp_operation, p_cost_projection, p_sum_projection, p_comp_projection, l_current_cost, l_result);
+                            if (l_iterator.base().base() == p_first)
+                                break;
+                        }
                 return l_result;
             }
             template <
