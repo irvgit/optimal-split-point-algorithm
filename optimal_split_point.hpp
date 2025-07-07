@@ -36,6 +36,11 @@ namespace osp {
         concept subrange = is_subrange<std::remove_cvref_t<tp_type_t>>::value;
 
         template <typename tp_type_t>
+        concept common_subrange =
+            subrange<tp_type_t> &&
+            std::ranges::common_range<tp_type_t>;
+
+        template <typename tp_type_t>
         struct is_pair : std::false_type {};
         template <
             typename tp_type1_t,
@@ -62,6 +67,12 @@ namespace osp {
                 std::ranges::iterator_t<typename std::remove_cvref_t<tp_type_t>::first_type>,
                 std::ranges::iterator_t<typename std::remove_cvref_t<tp_type_t>::second_type>
             >;
+
+        template <typename tp_subrange1_t, typename tp_subrange2_t>
+        concept subranges_for_partition = partition<std::pair<
+            tp_subrange1_t,
+            tp_subrange2_t
+        >>;
 
         template <typename tp_type_t>
         concept common_partition =
@@ -249,12 +260,12 @@ namespace osp {
     namespace detail {
         struct merge_partition_fn {
             template <
-                subrange tp_subrange1_t,
-                subrange tp_subrange2_t
+                common_subrange tp_common_subrange_t,
+                subrange        tp_subrange_t
             >
             auto constexpr operator()[[nodiscard]] (
-                tp_subrange1_t p_partition_left,
-                tp_subrange2_t p_partition_right
+                tp_common_subrange_t p_partition_left,
+                tp_subrange_t        p_partition_right
             )
             const noexcept(noexcept(
                 std::ranges::subrange{
@@ -263,8 +274,8 @@ namespace osp {
                 }
             ))
             -> std::ranges::subrange<
-                std::ranges::iterator_t<tp_subrange1_t>,
-                std::ranges::sentinel_t<tp_subrange2_t>
+                std::ranges::iterator_t<tp_common_subrange_t>,
+                std::ranges::sentinel_t<tp_subrange_t>
             > {
                 return std::ranges::subrange{
                     std::ranges::begin(p_partition_left),
@@ -293,6 +304,156 @@ namespace osp {
     auto constexpr merge_partition = detail::merge_partition_fn{};
 
     namespace detail {
+        struct merge_partition_if_more_efficient_fn {
+            template <
+                common_subrange tp_common_subrange_t,
+                subrange        tp_subrange_t,
+                typename        tp_cost_operation_t,
+                typename        tp_sum_operation_t   = std::plus<>,
+                typename        tp_comp_operation_t  = std::ranges::less,
+                typename        tp_cost_projection_t = std::identity,
+                typename        tp_sum_projection_t  = std::identity,
+                typename        tp_comp_projection_t = std::identity
+
+            >
+            requires (
+                binary_splitable<
+                    std::ranges::iterator_t<tp_common_subrange_t>,
+                    std::ranges::sentinel_t<tp_subrange_t>,
+                    tp_cost_operation_t,
+                    tp_sum_operation_t,
+                    tp_comp_operation_t,
+                    tp_cost_projection_t,
+                    tp_sum_projection_t,
+                    tp_comp_projection_t
+                >
+            )
+            auto constexpr operator()[[nodiscard]] (
+                tp_common_subrange_t p_partition_left,
+                tp_subrange_t        p_partition_right,
+                tp_cost_operation_t  p_cost_operation,
+                tp_sum_operation_t   p_sum_operation   = {},
+                tp_comp_operation_t  p_comp_operation  = {},
+                tp_cost_projection_t p_cost_projection = {},
+                tp_sum_projection_t  p_sum_projection  = {},
+                tp_comp_projection_t p_comp_projection = {}
+            )
+            const noexcept(
+                false //need to do the condition
+            )
+            -> std::ranges::subrange<
+                std::ranges::iterator_t<tp_common_subrange_t>,
+                std::ranges::sentinel_t<tp_subrange_t>
+            > {
+                auto l_merged_subrange = osp::merge_partition(
+                    p_partition_left,
+                    p_partition_right
+                );
+                return std::invoke(
+                    p_comp_operation,
+                    std::invoke(
+                        p_comp_projection,
+                        std::invoke(
+                            p_cost_operation,
+                            std::invoke(
+                                p_cost_projection,
+                                l_merged_subrange
+                            )
+                        )
+                    ),
+                    std::invoke(
+                        p_comp_projection,
+                        std::invoke(
+                            p_sum_operation,
+                            std::invoke(
+                                p_sum_projection,
+                                std::invoke(
+                                    p_cost_operation,
+                                    std::invoke(
+                                        p_cost_projection,
+                                        p_partition_left
+                                    )
+                                )
+                            ),
+                            std::invoke(
+                                p_sum_projection,
+                                std::invoke(
+                                    p_cost_operation,
+                                    std::invoke(
+                                        p_cost_projection,
+                                        p_partition_right
+                                    )
+                                )
+                            )
+                        )
+                    )
+                ) ? l_merged_subrange : std::ranges::subrange<
+                    std::ranges::iterator_t<tp_common_subrange_t>,
+                    std::ranges::sentinel_t<tp_subrange_t>
+                >{};
+            }
+            template <
+                partition tp_partition_t,
+                typename  tp_cost_operation_t,
+                typename  tp_sum_operation_t   = std::plus<>,
+                typename  tp_comp_operation_t  = std::ranges::less,
+                typename  tp_cost_projection_t = std::identity,
+                typename  tp_sum_projection_t  = std::identity,
+                typename  tp_comp_projection_t = std::identity
+            >
+            requires (
+                binary_splitable<
+                    std::ranges::iterator_t<typename std::remove_cvref_t<tp_partition_t>::first_type>,
+                    std::ranges::sentinel_t<typename std::remove_cvref_t<tp_partition_t>::second_type>,
+                    tp_cost_operation_t,
+                    tp_sum_operation_t,
+                    tp_comp_operation_t,
+                    tp_cost_projection_t,
+                    tp_sum_projection_t,
+                    tp_comp_projection_t
+                >
+            )
+            auto constexpr operator()[[nodiscard]] (
+                tp_partition_t&&     p_partition,
+                tp_cost_operation_t  p_cost_operation,
+                tp_sum_operation_t   p_sum_operation   = {},
+                tp_comp_operation_t  p_comp_operation  = {},
+                tp_cost_projection_t p_cost_projection = {},
+                tp_sum_projection_t  p_sum_projection  = {},
+                tp_comp_projection_t p_comp_projection = {}
+            )
+            const noexcept(noexcept(
+                (*this)(
+                    p_partition.first,
+                    p_partition.second,
+                    std::move(p_cost_operation),
+                    std::move(p_sum_operation),
+                    std::move(p_comp_operation),
+                    std::move(p_cost_projection),
+                    std::move(p_sum_projection),
+                    std::move(p_comp_projection)
+                )
+            ))
+            -> std::ranges::subrange<
+                std::ranges::iterator_t<typename std::remove_cvref_t<tp_partition_t>::first_type>,
+                std::ranges::sentinel_t<typename std::remove_cvref_t<tp_partition_t>::second_type>
+            > {
+                return (*this)(
+                    p_partition.first,
+                    p_partition.second,
+                    std::move(p_cost_operation),
+                    std::move(p_sum_operation),
+                    std::move(p_comp_operation),
+                    std::move(p_cost_projection),
+                    std::move(p_sum_projection),
+                    std::move(p_comp_projection)
+                );
+            }
+        };
+    }
+    auto constexpr merge_partition_if_more_efficient = detail::merge_partition_if_more_efficient_fn{};
+
+    namespace detail {
         struct is_valid_partition_fn {
             template <partition tp_partition_t>
             auto constexpr operator()[[nodiscard]] (tp_partition_t&& p_partition)
@@ -304,18 +465,6 @@ namespace osp {
     }
     auto constexpr is_valid_partition   = detail::is_valid_partition_fn{};
     auto constexpr is_invalid_partition = std::not_fn(is_valid_partition);
-
-    namespace detail {
-        struct is_common_partition_fn {
-            template <partition tp_partition_t>
-            auto constexpr operator()[[nodiscard]] (tp_partition_t&& p_partition)
-            const noexcept
-            -> bool {
-                return common_partition<tp_partition_t>;
-            }
-        };
-    }
-    auto constexpr is_common_partition = detail::is_common_partition_fn{};
     
     namespace detail {
         template <
