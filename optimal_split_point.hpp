@@ -377,13 +377,17 @@ namespace osp {
                 auto l_one_before_last = std::ranges::prev(p_last);
                 for (auto l_iterator = std::ranges::next(p_first); l_iterator != l_one_before_last; std::ranges::advance(l_iterator, static_cast<std::iter_difference_t<tp_input_iterator_t>>(std::intmax_t{1} + tp_downscaling), l_one_before_last))
                     l_impl(p_first, l_iterator, p_last, p_cost_operation, p_sum_operation, p_comp_operation, p_cost_projection, p_sum_projection, p_comp_projection, l_current_cost, l_result);
-                if constexpr (!tp_disable_backtracking && tp_downscaling && std::bidirectional_iterator<tp_input_iterator_t>)
-                    if (l_result != p_last)
-                        for (auto l_iterator = std::counted_iterator{std::reverse_iterator{std::ranges::prev(l_result)}, tp_downscaling}; l_iterator != std::default_sentinel; ++l_iterator) {
-                            l_impl(p_first, l_iterator.base().base(), p_last, p_cost_operation, p_sum_operation, p_comp_operation, p_cost_projection, p_sum_projection, p_comp_projection, l_current_cost, l_result);
-                            if (l_iterator.base().base() == p_first)
-                                break;
-                        }
+                if constexpr (!tp_disable_backtracking && tp_downscaling)
+                    if (l_result != p_last) {
+                        for (auto l_iterator = std::counted_iterator{std::ranges::next(l_result), tp_downscaling}; l_iterator != std::default_sentinel && l_iterator.base() != p_last; ++l_iterator)
+                            l_impl(p_first, l_iterator.base(), p_last, p_cost_operation, p_sum_operation, p_comp_operation, p_cost_projection, p_sum_projection, p_comp_projection, l_current_cost, l_result);
+                        if constexpr (std::bidirectional_iterator<tp_input_iterator_t>)
+                            for (auto l_iterator = std::counted_iterator{std::reverse_iterator{std::ranges::prev(l_result)}, tp_downscaling}; l_iterator != std::default_sentinel; ++l_iterator) {
+                                l_impl(p_first, l_iterator.base().base(), p_last, p_cost_operation, p_sum_operation, p_comp_operation, p_cost_projection, p_sum_projection, p_comp_projection, l_current_cost, l_result);
+                                if (l_iterator.base().base() == p_first)
+                                    break;
+                            }
+                    }
                 return l_result;
             }
             template <
